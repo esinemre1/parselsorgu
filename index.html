@@ -35,7 +35,7 @@ main{display:flex;flex:1;min-height:0;position:relative}.sidebar{width:var(--sid
 <div id="status"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const BASE='https://cbsapi.tkgm.gov.tr/megsiswebapi.v3/api';
+const BASE='https://cbsapi.tkgm.gov.tr/megsiswebapi.v3.1/api';
 const WORKER='https://parselsorgu-proxy.esinemre1.workers.dev';
 const API={iller:`${BASE}/idariYapi/ilListe`,ilceler:id=>`${BASE}/idariYapi/ilceListe/${id}`,mahalleler:id=>`${BASE}/idariYapi/mahalleListe/${id}`,parsel:(m,a,p)=>`${BASE}/parsel/${m}/${a}/${p}`};
 function proxyUrl(url){return `${WORKER}/?url=${encodeURIComponent(url)}`;}
