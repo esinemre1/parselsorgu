@@ -11,7 +11,7 @@ export default {
   if(!target) return new Response(JSON.stringify({error:"url parametresi gerekli"}),{status:400,headers:{...cors,"Content-Type":"application/json"}});
   let parsed;
   try{parsed=new URL(target)}catch{return new Response(JSON.stringify({error:"gecersiz url"}),{status:400,headers:{...cors,"Content-Type":"application/json"}})}
-  if(parsed.protocol!=="https:"||parsed.hostname!=="cbsapi.tkgm.gov.tr"||!parsed.pathname.startsWith("/megsiswebapi.v3/api/"))
+  if(parsed.protocol!=="https:"||parsed.hostname!=="cbsapi.tkgm.gov.tr"||!parsed.pathname.startsWith("/megsiswebapi.v3.1/api/"))
    return new Response(JSON.stringify({error:"hedef izinli degil"}),{status:403,headers:{...cors,"Content-Type":"application/json"}});
   try{
    const upstream=await fetch(parsed.toString(),{headers:{"Accept":"application/json","User-Agent":"ParselSorgu/1.0"}});
