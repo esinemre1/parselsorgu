@@ -28,7 +28,7 @@ main{display:flex;flex:1;min-height:0;position:relative}.sidebar{width:var(--sid
 <div class="grid"><div class="group"><label>Ada</label><input id="ada" type="number" placeholder="Ada"></div><div class="group"><label>Parsel</label><input id="parsel" type="number" placeholder="Parsel"></div></div>
 <button class="btn" id="queryBtn">Sorgula</button>
 <div class="result" id="result"><h3>BİLGİLER</h3><div class="row"><span class="muted">Alan</span><strong id="resAlan">-</strong></div><div class="row"><span class="muted">Konum</span><strong id="resKonum">-</strong></div><div style="padding:10px"><button class="btn green" id="dxfBtn">DXF İndir</button></div></div>
-<div class="note">Not: Bu sürüm tarayıcıda doğrudan TKGM CBS API'sine erişmeyi dener. Tarayıcı CORS politikası erişimi engellerse statik GitHub Pages üzerinde sorgu çalışmayabilir; bu durumda küçük bir sunucu/proxy katmanı gerekir.</div>
+<div class="note">TKGM bağlantısı doğrudan denenir; tarayıcı engellerse proxy katmanına otomatik geçilir.</div>
 </aside>
 <div id="map"></div><div class="branding">E.EMRE KIRIK</div>
 </main>
@@ -36,13 +36,30 @@ main{display:flex;flex:1;min-height:0;position:relative}.sidebar{width:var(--sid
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const BASE='https://cbsapi.tkgm.gov.tr/megsiswebapi.v3/api';
+const WORKER='https://parselsorgu-proxy.esinemre1.workers.dev';
 const API={iller:`${BASE}/idariYapi/ilListe`,ilceler:id=>`${BASE}/idariYapi/ilceListe/${id}`,mahalleler:id=>`${BASE}/idariYapi/mahalleListe/${id}`,parsel:(m,a,p)=>`${BASE}/parsel/${m}/${a}/${p}`};
+function proxyUrl(url){return `${WORKER}/?url=${encodeURIComponent(url)}`;}
 const $=id=>document.getElementById(id);const ui={il:$('il'),ilce:$('ilce'),mahalle:$('mahalle'),ada:$('ada'),parsel:$('parsel'),query:$('queryBtn'),result:$('result'),status:$('status'),dxf:$('dxfBtn')};
 const googleHybrid=L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']});
 const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'});
 const map=L.map('map',{zoomControl:false,layers:[googleHybrid]}).setView([39,35],6);L.control.zoom({position:'bottomright'}).addTo(map);L.control.layers({'Google Hybrid':googleHybrid,'OpenStreetMap':osm},{}).addTo(map);let geoLayer=null,currentParcelData=null;
 function showStatus(msg){ui.status.textContent=msg;ui.status.style.display='block';clearTimeout(window._st);window._st=setTimeout(()=>ui.status.style.display='none',3500)}
-async function smartFetch(url){ui.query.disabled=true;try{const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}catch(e){console.error(e);showStatus('Veri alınamadı. Tarayıcı CORS engeli olabilir.');return null}finally{ui.query.disabled=false}}
+async function smartFetch(url){
+ ui.query.disabled=true;
+ const attempts=[url,proxyUrl(url)];
+ try{
+  let lastError=null;
+  for(const endpoint of attempts){
+   try{
+    const r=await fetch(endpoint,{headers:{Accept:'application/json'}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return await r.json();
+   }catch(e){lastError=e;console.warn('API denemesi başarısız:',endpoint,e)}
+  }
+  throw lastError||new Error('API erişilemedi');
+ }catch(e){console.error(e);showStatus('TKGM bağlantısı kurulamadı. Proxy kurulumu gerekebilir.');return null}
+ finally{ui.query.disabled=false}
+}
 async function loadOptions(url,target,label){target.disabled=true;const d=await smartFetch(url);target.innerHTML=`<option value="">${label} Seç...</option>`;if(d?.features){d.features.sort((a,b)=>String(a.properties.text).localeCompare(String(b.properties.text),'tr')).forEach(f=>{const o=document.createElement('option');o.value=f.properties.id;o.textContent=f.properties.text;target.appendChild(o)});target.disabled=false}}
 ui.il.onchange=()=>{ui.ilce.innerHTML='<option value="">-</option>';ui.mahalle.innerHTML='<option value="">-</option>';ui.mahalle.disabled=true;if(ui.il.value)loadOptions(API.ilceler(ui.il.value),ui.ilce,'İlçe')};
 ui.ilce.onchange=()=>{ui.mahalle.innerHTML='<option value="">-</option>';if(ui.ilce.value)loadOptions(API.mahalleler(ui.ilce.value),ui.mahalle,'Mahalle')};
