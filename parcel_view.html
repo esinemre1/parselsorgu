@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parsel Detay Kartı - Akıllı Tapu Sistemi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="parcel_view.css">
+</head>
+<body>
+    <div class="bg-blur"></div>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="ph ph-map-trifold"></i>
+                <span>GEO<span>PARSEL</span></span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon"><i class="ph ph-share-network"></i></button>
+                <button class="btn-icon"><i class="ph ph-download-simple"></i></button>
+            </div>
+        </header>
+
+        <main>
+            <section class="hero">
+                <div class="parcel-card glass">
+                    <div class="parcel-badge">AKTİF PARSEL</div>
+                    <h1>Parsel No: 2945/49</h1>
+                    <p class="location"><i class="ph ph-map-pin"></i> ITRF-95 / TM33 Koordinat Sistemi</p>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="label">Toplam Alan</span>
+                            <span class="value">2.945,49 <small>m²</small></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Çevre</span>
+                            <span class="value">242,16 <small>m</small></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Nokta Sayısı</span>
+                            <span class="value">12</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="visual-card glass">
+                    <div class="svg-container" id="parcelSvgContainer">
+                        <!-- SVG will be injected here -->
+                    </div>
+                    <div class="visual-controls">
+                        <button class="ctrl-btn" id="zoomIn"><i class="ph ph-plus"></i></button>
+                        <button class="ctrl-btn" id="zoomOut"><i class="ph ph-minus"></i></button>
+                        <button class="ctrl-btn" id="resetView"><i class="ph ph-arrows-out"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="data-section">
+                <div class="table-card glass">
+                    <div class="card-header">
+                        <h3><i class="ph ph-table"></i> Koordinat Özeti (ITRF33)</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nokta No</th>
+                                    <th>Y (Easting)</th>
+                                    <th>X (Northing)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="coordTableBody">
+                                <!-- Rows will be injected -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="analysis-card glass">
+                    <h3><i class="ph ph-intersect"></i> Analiz Notları</h3>
+                    <div class="analysis-content">
+                        <div class="analysis-item">
+                            <i class="ph ph-check-circle"></i>
+                            <div>
+                                <strong>Geometrik Doğruluk</strong>
+                                <p>Parsel sınırları ITRF-95 normlarına göre %100 kapalı poligon yapısındadır.</p>
+                            </div>
+                        </div>
+                        <div class="analysis-item">
+                            <i class="ph ph-warning-circle"></i>
+                            <div>
+                                <strong>Yanılma Sınırı (Tecviz)</strong>
+                                <p>Hesaplanan tolerans değeri (0.42m) yasal limitler içerisindedir.</p>
+                            </div>
+                        </div>
+                        <div class="analysis-item">
+                            <i class="ph ph-file-text"></i>
+                            <div>
+                                <strong>Rapor Durumu</strong>
+                                <p>Sayısal alan hesabı onaylanmıştır. Tapu tesciline uygundur.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-primary">Tam Raporu İndir</button>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 GEOPARSEL Profesyonel Ölçüm ve Analiz Sistemleri</p>
+        </footer>
+    </div>
+    <script src="parcel_view.js"></script>
+</body>
+</html>

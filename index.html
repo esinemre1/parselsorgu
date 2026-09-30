@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parsel Sorgulama - TKGM</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./style.css">
+    <!-- Proj4 for Coordinate Transformation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+    <!-- DXF Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="tkgm-navbar">
+    <div class="navbar-left">
+        <button class="mobile-menu-toggle" id="mobileMenuBtn" style="background:transparent; border:none; color:#fff; font-size:1.5rem; margin-right:10px; cursor:pointer;"><i class="fa fa-bars"></i></button>
+        <div class="tkgm-logo-box">
+            <i class="fa fa-map-marked-alt fa-lg"></i>
+        </div>
+        <div>
+            <div class="navbar-title">Tapu ve Kadastro Genel Müdürlüğü</div>
+            <div class="navbar-subtitle">Parsel Sorgulama Uygulaması</div>
+        </div>
+    </div>
+    <div class="navbar-right">
+        <span class="online-badge"><span class="dot-live"></span> Canlı Sistem</span>
+    </div>
+</nav>
+
+<div class="app-layout">
+
+    <!-- ===== ARKA PLAN KARARTMA (MOBİL İÇİN) ===== -->
+    <div class="mobile-backdrop" id="mobileBackdrop"></div>
+
+    <!-- ===== SOL PANEL ===== -->
+    <div class="side-panel" id="sidePanel">
+
+        <!-- Tab Buttons -->
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="idari"><i class="fa fa-list-ul"></i> İdari Sorgu</button>
+            <button class="tab-btn" data-tab="cografi"><i class="fa fa-crosshairs"></i> Coğrafi Sorgu</button>
+            <button class="tab-btn" data-tab="katman"><i class="fa fa-layer-group"></i> Katman Yükle</button>
+
+            <button class="tab-btn" data-tab="history"><i class="fa fa-history"></i> Geçmiş</button>
+            <button class="tab-btn" data-tab="tecviz"><i class="fa fa-calculator"></i> Tecviz</button>
+        </div>
+
+        <!-- İdari Sorgu -->
+        <div class="tab-content active" id="tab-idari">
+            <div class="form-section">
+                <div class="form-group-custom">
+                    <label>İl</label>
+                    <select id="province" class="form-select-custom">
+                        <option value="">-- Seçiniz --</option>
+                    </select>
+                    <div class="select-loader" id="prov-loader"><i class="fa fa-circle-notch fa-spin"></i> Yükleniyor...</div>
+                </div>
+                <div class="form-group-custom">
+                    <label>İlçe</label>
+                    <select id="district" class="form-select-custom" disabled>
+                        <option value="">-- Önce İl Seçiniz --</option>
+                    </select>
+                    <div class="select-loader d-none" id="dist-loader"><i class="fa fa-circle-notch fa-spin"></i> Yükleniyor...</div>
+                </div>
+                <div class="form-group-custom">
+                    <label>Mahalle / Köy</label>
+                    <select id="neighborhood" class="form-select-custom" disabled>
+                        <option value="">-- Önce İlçe Seçiniz --</option>
+                    </select>
+                    <div class="select-loader d-none" id="mah-loader"><i class="fa fa-circle-notch fa-spin"></i> Yükleniyor...</div>
+                </div>
+                <div class="form-row-custom">
+                    <div class="form-group-custom">
+                        <label>Ada No</label>
+                        <input type="number" id="block" class="form-input-custom" min="1">
+                    </div>
+                    <div class="form-group-custom">
+                        <label>Parsel No</label>
+                        <input type="number" id="parcel" class="form-input-custom" min="1">
+                    </div>
+                </div>
+                <button id="search-btn" class="btn-search">
+                    <i class="fa fa-search"></i> SORGULA
+                </button>
+                <button id="clear-btn" class="btn-clear">
+                    <i class="fa fa-eraser"></i> TEMİZLE
+                </button>
+            </div>
+        </div>
+
+        <!-- Coğrafi Sorgu -->
+        <div class="tab-content" id="tab-cografi">
+            <div class="form-section">
+                <div class="info-box"><i class="fa fa-info-circle"></i> Haritada bir noktaya tıklayarak veya koordinat girerek sorgu yapabilirsiniz.</div>
+                <div class="form-group-custom">
+                    <label>Enlem (Latitude)</label>
+                    <input type="text" id="lat-input" class="form-input-custom" placeholder="Örn: 39.925324">
+                </div>
+                <div class="form-group-custom">
+                    <label>Boylam (Longitude)</label>
+                    <input type="text" id="lon-input" class="form-input-custom" placeholder="Örn: 32.866287">
+                </div>
+                <button id="coord-search-btn" class="btn-search">
+                    <i class="fa fa-crosshairs"></i> KOORDİNAT İLE SORGULA
+                </button>
+                <div class="info-box mt-3" style="color:#f59e0b; border-color:#f59e0b44; background:#fffbeb0a;">
+                    <i class="fa fa-triangle-exclamation"></i> Koordinat sorgusu TKGM API kısıtlaması nedeniyle şu an çalışmıyor olabilir.
+                </div>
+            </div>
+        </div>
+
+        <!-- Katman Yükle -->
+        <div class="tab-content" id="tab-katman">
+            <div class="form-section">
+
+                <!-- KML Yükle -->
+                <div class="upload-card">
+                    <div class="upload-card-header">
+                        <i class="fa fa-file-code"></i> KML / KMZ Dosyası
+                    </div>
+                    <div class="drop-zone" id="kml-drop">
+                        <i class="fa fa-cloud-upload-alt fa-2x"></i>
+                        <p>Sürükle &amp; Bırak veya Tıkla</p>
+                        <small>.kml, .kmz uzantılı dosyalar</small>
+                        <input type="file" id="kml-input" accept=".kml,.kmz" hidden>
+                    </div>
+                    <div id="kml-list" class="layer-list"></div>
+                </div>
+
+                <!-- WMS Ekle -->
+                <div class="upload-card mt-3">
+                    <div class="upload-card-header">
+                        <i class="fa fa-globe"></i> WMS Katman Ekle
+                    </div>
+                    <div class="form-group-custom">
+                        <label>WMS URL</label>
+                        <input type="text" id="wms-url" class="form-input-custom" placeholder="https://example.com/wms">
+                    </div>
+                    <div class="form-group-custom">
+                        <label>Katman Adı (layers)</label>
+                        <input type="text" id="wms-layers" class="form-input-custom" placeholder="katman:adi">
+                    </div>
+                    <div class="form-group-custom">
+                        <label>Katman Başlığı</label>
+                        <input type="text" id="wms-title" class="form-input-custom" placeholder="Benim WMS Katmanım">
+                    </div>
+                    <button id="add-wms-btn" class="btn-search">
+                        <i class="fa fa-plus"></i> WMS Katmanı Ekle
+                    </button>
+                    <div id="wms-list" class="layer-list mt-2"></div>
+                </div>
+
+                <!-- DXF Yükle -->
+                <div class="upload-card mt-3">
+                    <div class="upload-card-header">
+                        <i class="fa fa-file-invoice"></i> DXF Yükle (ITRF / TM)
+                    </div>
+                    <div class="form-section">
+                        <div class="info-box" style="font-size:0.7rem; margin-bottom:8px;">
+                            <i class="fa fa-info-circle"></i> ITRF/TM koordinatlı DXF dosyalarınızı WGS84'e dönüştürerek haritaya ekler.
+                        </div>
+                        <div class="form-group-custom">
+                            <label>Projeksiyon (Dilim)</label>
+                            <select id="dxf-proj" class="form-select-custom">
+                                <option value="EPSG:5254">ITRF 96 / TM30 (30 Derece)</option>
+                                <option value="EPSG:5255">ITRF 96 / TM33 (33 Derece)</option>
+                                <option value="EPSG:5256">ITRF 96 / TM36 (36 Derece)</option>
+                                <option value="EPSG:5257">ITRF 96 / TM39 (39 Derece)</option>
+                                <option value="EPSG:5258">ITRF 96 / TM42 (42 Derece)</option>
+                                <option value="EPSG:5259">ITRF 96 / TM45 (45 Derece)</option>
+                                <option value="CUSTOM">Manuel Proj4 Tanımı</option>
+                            </select>
+                        </div>
+                        <div id="custom-proj-div" class="form-group-custom d-none">
+                            <label>Manuel Proj4 String</label>
+                            <input type="text" id="custom-proj-input" class="form-input-custom" placeholder="+proj=tmerc +lat_0=0 +lon_0=...">
+                        </div>
+                        <div class="drop-zone" id="dxf-drop">
+                            <i class="fa fa-file-contract fa-2x"></i>
+                            <p>DXF Dosyası Seç veya Bırak</p>
+                            <input type="file" id="dxf-input" accept=".dxf" hidden>
+                        </div>
+                        <div id="dxf-list" class="layer-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Geçmiş Sorgular -->
+        <div class="tab-content" id="tab-history">
+            <div class="form-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="m-0" style="font-weight:700; color:#1e293b;">Sorgu Geçmişi</h6>
+                    <button id="clear-all-history" class="btn btn-sm btn-outline-danger" style="font-size:0.7rem;">
+                        <i class="fa fa-trash"></i> Hepsini Sil
+                    </button>
+                </div>
+                <div id="history-list" class="layer-list">
+                    <div class="text-center py-4 text-muted" style="font-size:0.8rem;">
+                        <i class="fa fa-info-circle mb-2"></i><br>Henüz bir sorgulama yapmadınız.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tecviz Hesabı -->
+        <div class="tab-content" id="tab-tecviz">
+            <div class="form-section">
+                <div class="info-box">
+                    <i class="fa fa-info-circle"></i> 2022/31966 Sayılı Yönetmeliğe ve TKGM standartlarına göre Yanılma Sınırı (Tecviz) hesabı.
+                </div>
+                
+                <div class="form-group-custom">
+                    <label>Hesap Yöntemi</label>
+                    <select id="tecviz-method" class="form-select-custom">
+                        <option value="modern">Arşiv Onaylı Geometri (Yeni Yönetmelik)</option>
+                        <option value="legacy">Üretim Yöntemine Göre (Klasik/Diğer)</option>
+                    </select>
+                </div>
+
+                <div id="legacy-options" class="d-none">
+                    <div class="form-group-custom">
+                        <label>Koordinat Kalitesi / Yöntem (mP)</label>
+                        <select id="tecviz-mp-type" class="form-select-custom">
+                            <option value="0.09">Sayısal / Fotogrametrik (mP: 0.09)</option>
+                            <option value="0.21">Prizmatik / Klasik (mP: 0.21)</option>
+                            <option value="0.35">Grafik 1/1000 (mP: 0.35)</option>
+                            <option value="0.60">Grafik 1/2000 (mP: 0.60)</option>
+                            <option value="1.43">Grafik 1/5000 (mP: 1.43)</option>
+                            <option value="custom">Manuel mP Gir</option>
+                        </select>
+                    </div>
+                    <div id="custom-mp-div" class="form-group-custom d-none">
+                        <label>Manuel mP Değeri</label>
+                        <input type="number" id="custom-mp-input" class="form-input-custom" step="0.01" value="0.09">
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="form-group-custom">
+                            <label>Tapu Alanı (F)</label>
+                            <input type="number" id="tecviz-area-tapu" class="form-input-custom" placeholder="m²" value="1000">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="form-group-custom">
+                            <label>Hesap Alanı (f)</label>
+                            <input type="number" id="tecviz-area-hesap" class="form-input-custom" placeholder="m²" value="1005">
+                        </div>
+                    </div>
+                </div>
+
+                <button id="calc-tecviz-btn" class="btn-search">
+                    <i class="fa fa-calculator"></i> YANILMA SINIRINI HESAPLA
+                </button>
+
+                <!-- Tecviz Sonuç -->
+                <div id="tecviz-result-div" class="tecviz-result-card mt-4 d-none">
+                    <div class="tecviz-item">
+                        <span class="t-label">Yanılma Sınırı (dy):</span>
+                        <span id="t-value" class="t-val" style="color: #c2410c;">0.00 m²</span>
+                    </div>
+                    <div class="tecviz-item">
+                        <span class="t-label">Alan Farkı (|F-f|):</span>
+                        <span id="t-diff" class="t-val-sub">0.00 m²</span>
+                    </div>
+                    <div class="tecviz-item" style="border-top: 1px solid #dee2e6; margin-top: 5px; padding-top: 10px;">
+                        <span class="t-label">En Az (Alt Sınır):</span>
+                        <span id="t-range-min" class="t-val-sub" style="color: #475569;">0.00 m²</span>
+                    </div>
+                    <div class="tecviz-item">
+                        <span class="t-label">En Çok (Üst Sınır):</span>
+                        <span id="t-range-max" class="t-val-sub" style="color: #475569;">0.00 m²</span>
+                    </div>
+                    <div id="t-status-box" class="mt-3 p-2 text-center border-radius-sm" style="font-weight: 700; border-radius: 8px;">
+                        DURUM BEKLENİYOR
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="side-panel-footer">
+            <!-- Sonuç Paneli -->
+            <div id="results-panel" class="results-panel hidden">
+                <div class="results-header">
+                    <span><i class="fa fa-map-pin"></i> Taşınmaz Bilgileri</span>
+                    <div class="header-actions">
+                        <button id="minimize-results" title="Küçült/Büyüt"><i class="fa fa-chevron-down"></i></button>
+                        <button id="close-results" title="Kapat"><i class="fa fa-times"></i></button>
+                    </div>
+                </div>
+                <table class="results-table">
+                    <tbody>
+                        <tr><th>İl</th><td id="res-il">-</td></tr>
+                        <tr><th>İlçe</th><td id="res-ilce">-</td></tr>
+                        <tr><th>Mahalle/Köy</th><td id="res-mah">-</td></tr>
+                        <tr><th>Ada No</th><td id="res-ada">-</td></tr>
+                        <tr><th>Parsel No</th><td id="res-parsel">-</td></tr>
+                        <tr><th>Tapu Alanı</th><td id="res-area">-</td></tr>
+                        <tr><th>Geometrik Alan</th><td id="res-geom-area">-</td></tr>
+                        <tr><th>Çevre Uzunluğu</th><td id="res-perimeter">-</td></tr>
+                        <tr id="res-diff-row" class="d-none"><th>Alan Farkı</th><td id="res-diff">-</td></tr>
+                        <tr><th>Nitelik</th><td id="res-type">-</td></tr>
+                        <tr><th>Pafta</th><td id="res-loc">-</td></tr>
+                        <tr><th>Zemin Tipi</th><td id="res-zemin">Ana Taşınmaz</td></tr>
+                    </tbody>
+                </table>
+                <div class="results-actions">
+                    <button id="btn-zoom" title="Parsele Git"><i class="fa fa-compress-arrows-alt"></i> Git</button>
+                    <button id="btn-coords" title="Koordinat Listesi"><i class="fa fa-table"></i> Koordinat</button>
+                    <button id="btn-share" title="Paylaş"><i class="fa fa-share-alt"></i> Paylaş</button>
+                    <button id="btn-print" title="Yazdır"><i class="fa fa-print"></i> Yazdır</button>
+                </div>
+
+                </div>
+            </div>
+        </div>
+
+    <!-- ===== HARİTA ===== -->
+    <div class="map-container">
+        <div id="map"></div>
+
+        <!-- Harita araçları -->
+            <div class="map-toolbox">
+                <button class="map-tool-btn" id="tool-zoom-in" title="Yaklaş"><i class="fa fa-plus"></i></button>
+                <button class="map-tool-btn" id="tool-zoom-out" title="Uzaklaş"><i class="fa fa-minus"></i></button>
+                <button class="map-tool-btn" id="tool-home" title="Türkiye Geneli"><i class="fa fa-home"></i></button>
+                <div class="tool-divider"></div>
+
+                <button class="map-tool-btn" id="tool-google" title="Google Uydu"><i class="fab fa-google"></i></button>
+                <button class="map-tool-btn" id="tool-labels" title="Etiketleri Aç/Kapat"><i class="fa fa-tags"></i></button>
+                <button class="map-tool-btn" id="tool-sat" title="Esri Uydu"><i class="fa fa-satellite"></i></button>
+                <button class="map-tool-btn" id="tool-street" title="Sokak Görünümü"><i class="fa fa-road"></i></button>
+                <button class="map-tool-btn" id="tool-blank" title="Boş Ekran (Beyaz)"><i class="fa-regular fa-square"></i></button>
+            </div>
+
+        <!-- Koordinat göstergesi -->
+        <div class="coord-bar" id="coord-bar">Koordinat: -</div>
+
+        <!-- Uyarı -->
+        <div class="disclaimer-bar">
+            DİKKAT: Bu uygulama yalnızca bilgilendirme amaçlıdır. Hukuki işlemlerde kullanılamaz.
+        </div>
+
+
+    </div>
+
+</div> <!-- Ends app-layout -->
+
+<!-- Koordinat Modal -->
+<div class="modal fade" id="coordsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: #1565c0; color: #fff; border: none;">
+                <h5 class="modal-title" style="font-weight: 700;"><i class="fa fa-list"></i> Köşe Koordinatları (ITRF96/TM)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive" style="max-height: 450px;">
+                    <table class="table table-hover table-striped mb-0" style="font-size: 0.85rem;">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th class="ps-3">Nokta</th>
+                                <th>Y (Sağa)</th>
+                                <th>X (Yukarı)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coords-tbody">
+                            <!-- Koordinatlar buraya gelecek -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" id="copy-all-coords" class="btn" style="background: #1565c0; color: #fff;">
+                    <i class="fa fa-copy"></i> Tümünü Kopyala (Excel)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- leaflet-omnivore for KML -->
+<script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
+<script src="./main.js"></script>
+
+</body>
+</html>
